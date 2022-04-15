@@ -94,12 +94,15 @@ podman-tui uses following keyboard keys for different actions:
 
 | COMMAND      | DESCRIPTION |
 | ------------ | ----------- |
+| build        | build an image from Containerfile
 | diff         | inspect changes to the image's file systems
 | history      | show history of the selected image
+| import       | create a container image from a tarball
 | inspect      | display the configuration of the selected image
 | prune        | remove all unused images
 | rm           | removes the selected  image from local storage
 | search/pull  | search and pull image from registry
+| save         | save an image to docker-archive or oci-archive
 | tag          | add an additional name to the selected  image
 | untag        | remove a name from the selected image
 

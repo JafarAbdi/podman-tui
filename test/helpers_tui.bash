@@ -16,6 +16,10 @@ TEST_LABEL_VALUE="$TEST_NAME"
 TEST_LABEL="${TEST_LABEL_NAME}=${TEST_LABEL_VALUE}"
 TEST_SYSTEM_CONN_NAME="localhost_test_tui"
 TEST_SYSTEM_CONN_URI="unix://run/podman/podman.sock"
+TEST_IMAGE_BUILD_CONTEXT_DIR="$(realpath .)/test/testdata/"
+TEST_IMAGE_BUILD_TAG="${TEST_NAME}_image:latest"
+TEST_IMAGE_BUILD_REPOSITORY="localhost"
+TEST_IMAGE_SAVE_PATH="/tmp/${TEST_NAME}_image_save.tar"
 
 ################
 #  podman_tui_set_view  # switches to different podman-tui views
@@ -68,22 +72,28 @@ function podman_tui_send_inputs() {
 function podman_tui_select_image_cmd() {
   local menu_index=0
   case $1 in
-  "diff")
+  "build")
     menu_index=0;;
-  "history")
+  "diff")
     menu_index=1;;
-  "inspect")
+  "history")
     menu_index=2;;
-  "prune")
+  "import")
     menu_index=3;;
-  "remove")
+  "inspect")
     menu_index=4;;
-  "pull")
+  "prune")
     menu_index=5;;
-  "tag")
+  "remove")
     menu_index=6;;
-  "untag")
+  "save")
     menu_index=7;;
+  "pull")
+    menu_index=8;;
+  "tag")
+    menu_index=9;;
+  "untag")
+    menu_index=10;;
   esac
 
   podman_tui_select_menu $menu_index

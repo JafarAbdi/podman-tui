@@ -16,21 +16,26 @@ import (
 // Images implements the images primitive
 type Images struct {
 	*tview.Box
-	title          string
-	headers        []string
-	table          *tview.Table
-	errorDialog    *dialogs.ErrorDialog
-	cmdDialog      *dialogs.CommandDialog
-	cmdInputDialog *dialogs.SimpleInputDialog
-	messageDialog  *dialogs.MessageDialog
-	confirmDialog  *dialogs.ConfirmDialog
-	searchDialog   *imgdialogs.ImageSearchDialog
-	historyDialog  *imgdialogs.ImageHistoryDialog
-	progressDialog *dialogs.ProgressDialog
-	imagesList     imageListReport
-	selectedID     string
-	selectedName   string
-	confirmData    string
+	title           string
+	headers         []string
+	table           *tview.Table
+	errorDialog     *dialogs.ErrorDialog
+	cmdDialog       *dialogs.CommandDialog
+	cmdInputDialog  *dialogs.SimpleInputDialog
+	messageDialog   *dialogs.MessageDialog
+	confirmDialog   *dialogs.ConfirmDialog
+	searchDialog    *imgdialogs.ImageSearchDialog
+	historyDialog   *imgdialogs.ImageHistoryDialog
+	importDialog    *imgdialogs.ImageImportDialog
+	buildDialog     *imgdialogs.ImageBuildDialog
+	buildPrgDialog  *imgdialogs.ImageBuildProgressDialog
+	progressDialog  *dialogs.ProgressDialog
+	saveDialog      *imgdialogs.ImageSaveDialog
+	imagesList      imageListReport
+	selectedID      string
+	selectedName    string
+	confirmData     string
+	fastRefreshChan chan bool
 }
 
 type imageListReport struct {
@@ -50,15 +55,22 @@ func NewImages() *Images {
 		confirmDialog:  dialogs.NewConfirmDialog(),
 		searchDialog:   imgdialogs.NewImageSearchDialog(),
 		historyDialog:  imgdialogs.NewImageHistoryDialog(),
+		importDialog:   imgdialogs.NewImageImportDialog(),
+		buildDialog:    imgdialogs.NewImageBuildDialog(),
+		buildPrgDialog: imgdialogs.NewImageBuildProgressDialog(),
+		saveDialog:     imgdialogs.NewImageSaveDialog(),
 		progressDialog: dialogs.NewProgressDialog(),
 	}
 
 	images.cmdDialog = dialogs.NewCommandDialog([][]string{
+		{"build", "build an image from Containerfile"},
 		{"diff", "inspect changes to the image's file systems"},
 		{"history", "show history of the selected image"},
+		{"import", "create a container image from a tarball"},
 		{"inspect", "display the configuration of the selected image"},
 		{"prune", "remove all unused images"},
 		{"rm", "removes the selected  image from local storage"},
+		{"save", "save an image to docker-archive or oci-archive"},
 		{"search/pull", "search and pull image from registry"},
 		{"tag", "add an additional name to the selected  image"},
 		{"untag", "remove a name from the selected image"},
@@ -149,6 +161,21 @@ func NewImages() *Images {
 		images.pull(name)
 	})
 
+	// set build dialogs functions
+	images.buildDialog.SetCancelFunc(images.buildDialog.Hide)
+	images.buildDialog.SetBuildFunc(images.build)
+	images.buildPrgDialog.SetFastRefreshHandler(func() {
+		images.fastRefreshChan <- true
+	})
+
+	// set save dialog functions
+	images.saveDialog.SetCancelFunc(images.saveDialog.Hide)
+	images.saveDialog.SetSaveFunc(images.save)
+
+	// set import dialog functions
+	images.importDialog.SetCancelFunc(images.importDialog.Hide)
+	images.importDialog.SetImportFunc(images.imageImport)
+
 	return images
 }
 
@@ -171,10 +198,16 @@ func (img *Images) HasFocus() bool {
 	if img.searchDialog.HasFocus() || img.progressDialog.HasFocus() {
 		return true
 	}
-	if img.historyDialog.HasFocus() {
+	if img.historyDialog.HasFocus() || img.buildDialog.HasFocus() {
 		return true
 	}
-	return img.Box.HasFocus()
+	if img.buildPrgDialog.HasFocus() || img.saveDialog.HasFocus() {
+		return true
+	}
+	if img.importDialog.HasFocus() || img.Box.HasFocus() {
+		return true
+	}
+	return false
 }
 
 // SubDialogHasFocus returns whether or not sub dialog primitive has focus
@@ -189,6 +222,12 @@ func (img *Images) SubDialogHasFocus() bool {
 		return true
 	}
 	if img.searchDialog.HasFocus() || img.progressDialog.HasFocus() {
+		return true
+	}
+	if img.buildDialog.HasFocus() || img.buildPrgDialog.HasFocus() {
+		return true
+	}
+	if img.saveDialog.HasFocus() || img.importDialog.HasFocus() {
 		return true
 	}
 	return false
@@ -232,6 +271,26 @@ func (img *Images) Focus(delegate func(p tview.Primitive)) {
 		delegate(img.historyDialog)
 		return
 	}
+	// build dialog
+	if img.buildDialog.IsDisplay() {
+		delegate(img.buildDialog)
+		return
+	}
+	// build progress dialog
+	if img.buildPrgDialog.IsDisplay() {
+		delegate(img.buildPrgDialog)
+		return
+	}
+	// save dialog
+	if img.saveDialog.IsDisplay() {
+		delegate(img.saveDialog)
+		return
+	}
+	// import dialog
+	if img.importDialog.IsDisplay() {
+		delegate(img.importDialog)
+		return
+	}
 	delegate(img.table)
 }
 
@@ -273,4 +332,21 @@ func (img *Images) HideAllDialogs() {
 	if img.historyDialog.IsDisplay() {
 		img.historyDialog.Hide()
 	}
+	if img.buildDialog.IsDisplay() {
+		img.buildDialog.Hide()
+	}
+	if img.buildPrgDialog.IsDisplay() {
+		img.buildPrgDialog.Hide()
+	}
+	if img.saveDialog.IsDisplay() {
+		img.saveDialog.Hide()
+	}
+	if img.importDialog.IsDisplay() {
+		img.importDialog.Hide()
+	}
+}
+
+// SetFastRefreshChannel sets channel for fastRefresh func
+func (img *Images) SetFastRefreshChannel(refresh chan bool) {
+	img.fastRefreshChan = refresh
 }

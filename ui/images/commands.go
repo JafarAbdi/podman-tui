@@ -5,22 +5,29 @@ import (
 	"strings"
 
 	"github.com/containers/podman-tui/pdcs/images"
+
 	"github.com/rs/zerolog/log"
 )
 
 func (img *Images) runCommand(cmd string) {
 
 	switch cmd {
+	case "build":
+		img.buildDialog.Display()
 	case "diff":
 		img.diff()
 	case "history":
 		img.history()
+	case "import":
+		img.importDialog.Display()
 	case "inspect":
 		img.inspect()
 	case "prune":
 		img.cprune()
 	case "rm":
 		img.rm()
+	case "save":
+		img.csave()
 	case "search/pull":
 		img.searchDialog.Display()
 	case "tag":
@@ -28,20 +35,44 @@ func (img *Images) runCommand(cmd string) {
 	case "untag":
 		img.cuntag()
 	}
-
 }
 
 func (img *Images) displayError(title string, err error) {
-	var message string
-	if title != "" {
-		message = fmt.Sprintf("%s: %v", title, err)
-	} else {
-		message = fmt.Sprintf("%v", err)
-	}
-
 	log.Error().Msgf("%s: %v", strings.ToLower(title), err)
-	img.errorDialog.SetText(message)
+	img.errorDialog.SetTitle(title)
+	img.errorDialog.SetText(fmt.Sprintf("%v", err))
 	img.errorDialog.Display()
+}
+
+func (img *Images) build() {
+	img.buildDialog.Hide()
+	opts, err := img.buildDialog.ImageBuildOptions()
+	if err != nil {
+		img.buildPrgDialog.Hide()
+		img.displayError("IMAGE BUILD ERROR", err)
+		return
+	}
+	if opts.BuildOptions.ContextDirectory == "" && len(opts.ContainerFiles) == 0 {
+		img.displayError("IMAGE BUILD ERROR", fmt.Errorf("both context directory path and container files fields are empty"))
+		return
+	}
+	img.buildPrgDialog.Display()
+	writer := img.buildPrgDialog.LogWriter()
+	opts.BuildOptions.Out = writer
+	opts.BuildOptions.Err = writer
+
+	buildFunc := func() {
+		report, err := images.Build(opts)
+		img.buildPrgDialog.Hide()
+		if err != nil {
+			img.displayError("IMAGE BUILD ERROR", err)
+			return
+		}
+		img.messageDialog.SetTitle("podman image build")
+		img.messageDialog.SetText(report)
+		img.messageDialog.Display()
+	}
+	go buildFunc()
 }
 
 func (img *Images) diff() {
@@ -79,6 +110,29 @@ func (img *Images) history() {
 	img.historyDialog.UpdateResults(result)
 	img.historyDialog.Display()
 
+}
+
+func (img *Images) imageImport() {
+	importOpts, err := img.importDialog.ImageImportOptions()
+	if err != nil {
+		img.displayError("IMAGE IMPORT ERROR", err)
+		return
+	}
+	img.importDialog.Hide()
+	img.progressDialog.SetTitle("image import in progress")
+	img.progressDialog.Display()
+	importFunc := func() {
+		newImageID, err := images.Import(importOpts)
+		img.progressDialog.Hide()
+		if err != nil {
+			img.displayError("IMAGE IMPORT ERROR", err)
+			return
+		}
+		img.messageDialog.SetTitle("podman image import")
+		img.messageDialog.SetText(newImageID)
+		img.messageDialog.Display()
+	}
+	go importFunc()
 }
 
 func (img *Images) inspect() {
@@ -147,6 +201,39 @@ func (img *Images) remove() {
 
 	}
 	go remove(img.selectedID)
+}
+
+func (img *Images) csave() {
+	id, name := img.getSelectedItem()
+	if id == "" {
+		img.displayError("", fmt.Errorf("there is no image to save"))
+		return
+	}
+	img.saveDialog.SetImageInfo(id, name)
+	img.saveDialog.Display()
+}
+
+func (img *Images) save() {
+	saveOpts, err := img.saveDialog.ImageSaveOptions()
+	if err != nil {
+		title := fmt.Sprintf("IMAGE (%s) SAVE ERROR", img.selectedID)
+		img.displayError(title, err)
+		return
+	}
+	img.saveDialog.Hide()
+	img.progressDialog.SetTitle("image save in progress")
+	img.progressDialog.Display()
+	saveFunc := func() {
+		err := images.Save(img.selectedID, saveOpts)
+		img.progressDialog.Hide()
+		if err != nil {
+			title := fmt.Sprintf("IMAGE (%s) SAVE ERROR", img.selectedID)
+			img.displayError(title, err)
+			return
+		}
+	}
+	go saveFunc()
+
 }
 
 func (img *Images) search(term string) {

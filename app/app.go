@@ -2,7 +2,6 @@ package app
 
 import (
 	"os"
-	"time"
 
 	"github.com/containers/podman-tui/config"
 	"github.com/containers/podman-tui/pdcs/registry"
@@ -19,10 +18,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/rs/zerolog/log"
-)
-
-const (
-	refreshInterval = 1000 * time.Millisecond
 )
 
 // App represents main application struct
@@ -63,7 +58,7 @@ func NewApp(name string, version string) *App {
 		log.Fatal().Msgf("%v", err)
 	}
 
-	app.health = health.NewEngine(refreshInterval)
+	app.health = health.NewEngine(utils.RefreshInterval)
 
 	app.infoBar = infobar.NewInfoBar()
 
@@ -89,6 +84,10 @@ func NewApp(name string, version string) *App {
 	// set refresh channel for container page
 	// its required for container exec dialog
 	app.containers.SetFastRefreshChannel(app.fastRefreshChan)
+
+	// set refresh channel for image page
+	// its required for image build dialog
+	app.images.SetFastRefreshChannel(app.fastRefreshChan)
 
 	// menu items
 	var menuItems = [][]string{
@@ -136,6 +135,8 @@ func (app *App) Run() error {
 			os.Exit(0)
 		}
 		if !app.frontScreenHasActiveDialog() {
+			event = utils.ParseKeyEventKey(event)
+
 			// previous and next screen keys
 			switch event.Rune() {
 			case utils.NextScreenKey.Rune():

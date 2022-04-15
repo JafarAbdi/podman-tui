@@ -63,14 +63,44 @@ func (img *Images) InputHandler() func(event *tcell.EventKey, setFocus func(p tv
 			}
 		}
 
+		// build dialog handler
+		if img.buildDialog.HasFocus() {
+			if buildDialogHandler := img.buildDialog.InputHandler(); buildDialogHandler != nil {
+				buildDialogHandler(event, setFocus)
+			}
+		}
+
+		// build progress dialog handler
+		if img.buildPrgDialog.HasFocus() {
+			if buildPrgDialogHandler := img.buildPrgDialog.InputHandler(); buildPrgDialogHandler != nil {
+				buildPrgDialogHandler(event, setFocus)
+			}
+		}
+
+		// save dialog handler
+		if img.saveDialog.HasFocus() {
+			if saveDialogHandler := img.saveDialog.InputHandler(); saveDialogHandler != nil {
+				saveDialogHandler(event, setFocus)
+			}
+		}
+
+		// import dialog handler
+		if img.importDialog.HasFocus() {
+			if importDialogHandler := img.importDialog.InputHandler(); importDialogHandler != nil {
+				importDialogHandler(event, setFocus)
+			}
+		}
+
 		// table handlers
 		if img.table.HasFocus() {
+			img.selectedID, img.selectedName = img.getSelectedItem()
 			if event.Rune() == utils.CommandMenuKey.Rune() {
 				if img.cmdDialog.GetCommandCount() <= 1 {
 					return
 				}
-				img.selectedID, img.selectedName = img.getSelectedItem()
 				img.cmdDialog.Display()
+			} else if event.Key() == utils.DeleteKey.EventKey() {
+				img.rm()
 			} else {
 				if tableHandler := img.table.InputHandler(); tableHandler != nil {
 					tableHandler(event, setFocus)

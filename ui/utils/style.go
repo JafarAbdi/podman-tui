@@ -74,6 +74,27 @@ var Styles = theme{
 			BgColor: tcell.ColorNavy,
 		},
 	},
+	ImageImportDialog: imageImportDialog{
+		BgColor: tcell.ColorSteelBlue,
+		FgColor: tcell.ColorWhite,
+	},
+	ImageBuildDialog: imageBuildDialog{
+		BgColor: tcell.ColorSteelBlue,
+		FgColor: tcell.ColorWhite,
+	},
+	ImageBuildPrgDialog: imageBuildPrgDialog{
+		BgColor:      tcell.ColorSteelBlue,
+		FgColor:      tcell.ColorWhite,
+		PrgCellColor: tcell.ColorOrange,
+		Terminal: terminal{
+			BgColor: tview.Styles.PrimitiveBackgroundColor,
+			FgColor: tcell.ColorWhite,
+		},
+	},
+	ImageSaveDialog: imageSaveDialog{
+		BgColor: tcell.ColorSteelBlue,
+		FgColor: tcell.ColorWhite,
+	},
 	ContainerExecDialog: containerExecDialog{
 		BgColor: tcell.ColorSteelBlue,
 		FgColor: tcell.ColorWhite,
