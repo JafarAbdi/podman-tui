@@ -13,5 +13,5 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: linux
         goarch: amd64
-        pre_command: apt-get -y install libgpgme-dev libbtrfs-dev libdevmapper-dev libassuan-dev pkg-config
+        pre_command: apt update && apt -y install libgpgme-dev libbtrfs-dev libdevmapper-dev libassuan-dev pkg-config
         build_command: make binary
