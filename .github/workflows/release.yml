@@ -11,6 +11,7 @@ jobs:
     - uses: wangyoucao577/go-release-action@v1.29
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        build_command: make binary
         goos: linux
         goarch: amd64
+        pre_command: apt-get -y install libgpgme-dev libbtrfs-dev libdevmapper-dev libassuan-dev pkg-config
+        build_command: make binary
